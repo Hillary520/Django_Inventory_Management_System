@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory{% endblock %}
+
+{% block extra_styles %}
+    <!-- Bootstrap CSS for styling -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.css" />
+    <style>
+        .add-new-button {
+            margin-right: 20px; /* Adjust margin as needed for spacing */
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.25em 0.5em;
+        }
+        .dataTables_wrapper .dataTables_length select {
+            padding-right: 1.5rem;
+        }
+    </style>
+{% endblock %}
+
+{% load crispy_forms_tags %}
+
+{% block content %}
+<br>
+<div class="row d-flex align-items-stretch">
+    <!-- Inventory Overview Card -->
+    <div class="col-lg-3 col-md-6 col-sm-12 mb-4">
+        <div class="card overflow-hidden h-100">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-9 fw-semibold">Inventory Overview</h5>
+                <div class="row align-items-center">
+                    <div class="col-8">
+                        <h4 class="fw-semibold mb-3">Expired Items: </h4>
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="me-1 rounded-circle bg-light-success round-20 d-flex align-items-center justify-content-center">
+                                <i class="ti ti-arrow-up-left text-success"></i>
+                            </span>
+                            <p class="text-dark me-1 fs-3 mb-0">{{ expired_count }}</p>
+                            <p class="fs-3 mb-0">in stock</p>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="me-4">
+                                <span class="round-8 bg-primary rounded-circle me-2 d-inline-block"></span>
+                                <span class="fs-2">{{ expired_percentage }}% of stock</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="d-flex justify-content-center">
+                            <div id="inventory-overview"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Inventory Update Card -->
+    <div class="col-lg-3 col-md-6 col-sm-12 mb-4">
+        <div class="card overflow-hidden h-100">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-9 fw-semibold">Inventory Overview</h5>
+                <div class="row align-items-center">
+                    <div class="col-8">
+                        <h4 class="fw-semibold mb-3">Depreciated: </h4>
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="me-1 rounded-circle bg-light-danger round-20 d-flex align-items-center justify-content-center">
+                                <i class="ti ti-arrow-down-right text-danger"></i>
+                            </span>
+                            <p class="text-dark me-1 fs-3 mb-0">{{ depreciated_count }}</p>
+                            <p class="fs-3 mb-0">of Stock</p>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="me-4">
+                                <span class="round-8 bg-primary rounded-circle me-2 d-inline-block"></span>
+                                <span class="fs-2">Available</span>
+                            </div>
+                            <div>
+                                <span class="round-8 bg-light-primary rounded-circle me-2 d-inline-block"></span>
+                                <span class="fs-2">In-Stock</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="d-flex justify-content-center">
+                            <div id="monthly-update"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Low Stock Alerts Card -->
+    <div class="col-lg-3 col-md-6 col-sm-12 mb-4">
+        <div class="card overflow-hidden h-100">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-9 fw-semibold">Low Stock Alert</h5>
+                <div class="row align-items-center">
+                    <div class="col-8">
+                        <h4 class="fw-semibold mb-3">Low Stock: </h4>
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="me-1 rounded-circle bg-light-warning round-20 d-flex align-items-center justify-content-center">
+                                <i class="ti ti-alert-triangle text-warning"></i>
+                            </span>
+                            <p class="text-dark me-1 fs-3 mb-0">{{ low_stock_count }}</p>
+                            <p class="fs-3 mb-0">in Stock</p>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="me-4">
+                                <span class="round-8 bg-primary rounded-circle me-2 d-inline-block"></span>
+                                <span class="fs-2">Available</span>
+                            </div>
+                            <div>
+                                <span class="round-8 bg-light-primary rounded-circle me-2 d-inline-block"></span>
+                                <span class="fs-2"> </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="d-flex justify-content-center">
+                            <div id="low-stock"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Turnover Card -->
+    <div class="col-lg-3 col-md-6 col-sm-12 mb-4">
+        <div class="card overflow-hidden h-100">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-9 fw-semibold">Stock Alert</h5>
+                <div class="row align-items-center">
+                    <div class="col-8">
+                        <h4 class="fw-semibold mb-3">Out of Stock: </h4>
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="me-1 rounded-circle bg-light-info round-20 d-flex align-items-center justify-content-center">
+                                <i class="ti ti-refresh text-info"></i>
+                            </span>
+                            <p class="text-dark me-1 fs-3 mb-0">{{ out_of_stock_count }}</p>
+                            <p class="fs-3 mb-0">Items</p>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="me-4">
+                                <span class="round-8 bg-primary rounded-circle me-2 d-inline-block"></span>
+                                <span class="fs-2">out of Stock</span>
+                            </div>
+                            <div>
+                                <span class="round-8 bg-light-primary rounded-circle me-2 d-inline-block"></span>
+                                <span class="fs-2"> </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="d-flex justify-content-center">
+                            <div id="stock-turnover"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    
+    <br>
+    <!-- Button to trigger item modal -->
+        <button type="button" class="btn btn-outline-primary add-new-button" data-toggle="modal" data-target="#addItemModal">
+            Add New Item
+        </button>
+
+        <!-- Button to trigger category modal -->
+        <button type="button" class="btn btn-outline-primary add-new-button" data-toggle="modal" data-target="#addCategoryModal">
+            Add New Item Category
+        </button>
+
+        <!-- Button to trigger department modal -->
+        <button type="button" class="btn btn-outline-primary add-new-button" data-toggle="modal" data-target="#addDepartmentModal">
+            Add New Department
+        </button>
+        <!-- Button to trigger employee modal -->
+        <button type="button" class="btn btn-outline-primary add-new-button" data-toggle="modal" data-target="#addEmployeeModal">
+            Add New Staff
+        </button>
+    <hr>
+    
+    <!-- Item Modal -->
+        <div class="modal fade" id="addItemModal" tabindex="-1" role="dialog" aria-labelledby="addItemModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addItemModalLabel">Add New Item</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Form will be loaded here -->
+                        <form id="add-item-form" method="post" novalidate>
+                            {% csrf_token %}
+                            {{ form|crispy }}
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="submit-item-form">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Category Modal -->
+        <div class="modal fade" id="addCategoryModal" tabindex="-1" role="dialog" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addCategoryModalLabel">Add New Category</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Form will be loaded here -->
+                        <form id="add-category-form" method="post" novalidate>
+                            {% csrf_token %}
+                            {{ category_form|crispy }}
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="submit-category-form">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+    <!-- Department Modal -->
+        <div class="modal fade" id="addDepartmentModal" tabindex="-1" role="dialog" aria-labelledby="addDepartmentModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addDepartmentModalLabel">Add New Department</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Form will be loaded here -->
+                        <form id="add-department-form" method="post" novalidate>
+                            {% csrf_token %}
+                            {{ department_form|crispy }}
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="submit-department-form">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        
+        <!-- Employee Modal -->
+        <div class="modal fade" id="addEmployeeModal" tabindex="-1" role="dialog" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addEmployeeModalLabel">Add New Staff</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Form will be loaded here -->
+                        <form id="add-employee-form" method="post" novalidate>
+                            {% csrf_token %}
+                            {{ employee_form|crispy }}
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="submit-employee-form">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title fw-semibold mb-4">Inventory Items Table</h5>
+                <div class="table-responsive">
+                    <table id="inventoryTable" class="table table-striped table-bordered">
+                        <thead class="text-dark fs-4">
+                            <tr>
+                                <th>
+                                    <h6 class="fw-semibold mb-0">Item Name</h6>
+                                </th>
+                                <th>
+                                    <h6 class="fw-semibold mb-0">Description</h6>
+                                </th>
+                                <th>
+                                    <h6 class="fw-semibold mb-0">Category</h6>
+                                </th>
+                                <th>
+                                    <h6 class="fw-semibold mb-0">Date Added</h6>
+                                </th>
+                                <th>
+                                    <h6 class="fw-semibold mb-0">Added By</h6>
+                                </th>
+                                <th>
+                                    <h6 class="fw-semibold mb-0">Actions</h6>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                                <tr>
+                                    <td>{{ item.item_name }}</td>
+                                    <td>{{ item.description }}</td>
+                                    <td>{{ item.category }}</td>
+                                    <td>{{ item.date_added }}</td>
+                                    <td>{{ item.added_by }}</td>
+                                    <td>
+                                        <a href="{% url 'item_details' item.id %}" class="btn btn-primary btn-sm">View Details</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+
+{% endblock %}
+{% block extra_js %}
+    <!-- Bootstrap JS (optional, for certain features like tooltips) -->
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>        
+        $(document).ready( function () {
+            new DataTable('#inventoryTable');
+            
+        } );
+        
+        // Remove the text from the length menu dropdown
+        $('.dataTables_length label').contents().filter(function() {
+            return this.nodeType === 3; // Node.TEXT_NODE
+        }).remove();
+        
+        $(document).ready(function() {
+            // AJAX for Item Form
+            $('#submit-item-form').click(function() {
+                var form = $('#add-item-form');
+                $.ajax({
+                    url: '{% url "add_item" %}',  // The URL for the view that handles the form submission
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            $('#addItemModal').modal('hide');
+                            location.reload();
+                        } else {
+                            form.replaceWith(response.form_html);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.log("AJAX error:", status, error);
+                    }
+                });
+            });
+
+            // AJAX for Category Form
+            $('#submit-category-form').click(function() {
+                var form = $('#add-category-form');
+                $.ajax({
+                    url: '{% url "add_category" %}',  // The URL for the view that handles the form submission
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            $('#addCategoryModal').modal('hide');
+                            location.reload();
+                        } else {
+                            form.replaceWith(response.form_html);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.log("AJAX error:", status, error);
+                    }
+                });
+            });
+            
+            // AJAX for Category Form
+            $('#submit-department-form').click(function() {
+                var form = $('#add-department-form');
+                $.ajax({
+                    url: '{% url "add_department" %}',  // The URL for the view that handles the form submission
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            $('#addDepartmentModal').modal('hide');
+                            location.reload();
+                        } else {
+                            form.replaceWith(response.form_html);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.log("AJAX error:", status, error);
+                    }
+                });
+            });
+            
+            $('#submit-employee-form').click(function() {
+                var form = $('#add-employee-form');
+                $.ajax({
+                    url: '{% url "add_employee" %}',  // URL for the view handling employee form submission
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            $('#addEmployeeModal').modal('hide');
+                            location.reload();
+                        } else {
+                            form.replaceWith(response.form_html);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.log("AJAX error:", status, error);
+                    }
+                });
+            });
+            
+        });
+        
+    </script>
+{% endblock %}

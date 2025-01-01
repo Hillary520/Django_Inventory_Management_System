@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory Dashboard{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .row-eq-height {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    .row-eq-height > [class*='col-'] {
+        display: flex;
+        flex-direction: column;
+    }
+    .row-eq-height .card {
+        flex: 1;
+    }
+    .short-row .card {
+        height: 180px;
+    }
+    .medium-row .card {
+        height: 400px;
+    }
+    .tall-row .card {
+        height: 600px;
+    }
+    .chart-area, .chart-pie {
+        position: relative;
+        height: 100%;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4 mb-4">Inventory Dashboard</h1>
+
+    <!-- Top Row: Key Metrics -->
+    <div class="row row-eq-height short-row">
+        <!-- Inventory Overview Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Inventory Overview</div>
+                            <div class="h2 mb-0 font-weight-bold text-gray-800"><b>{{ total_items }}</b><p class="h5">Items</p></div>
+                            <div class="text-xs text-success">+{{ new_items_last_month }} new last month</div>      
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-box fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Update Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Monthly Update</div>
+                            <div class="h2 mb-0 font-weight-bold text-gray-800"><b>{{ new_items_this_month }}</b> <p class="h5">New Items</p></div>
+                            <div class="text-xs {% if monthly_change >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ monthly_change }}% from last month
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock Alerts Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Low Stock Alerts</div>
+                            <div class="h2 mb-0 font-weight-bold text-gray-800">{{ low_stock_items }} <p class="h5">Items</p></div>
+                            <div class="text-xs text-danger">{{ low_stock_percentage }}% of inventory</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Turnover Card -->
+        <!-- <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Stock Turnover</div>
+                            <div class="h2 mb-0 font-weight-bold text-gray-800">{{ turnover_rate }}%</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-sync fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> -->
+
+    <!-- Middle Row: Charts -->
+    <div class="row row-eq-height medium-row">
+        <!-- Stock Sizes by Departments Chart -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4 h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Stock Sizes by Departments</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area h-100">
+                        <canvas id="departmentStockChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Issued Items Pie Chart -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4 h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Top Issued Items</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie h-100">
+                        <canvas id="topIssuedItemsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Row: Tables -->
+    <div class="row row-eq-height tall-row">
+        <!-- Out of Stock Items -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4 h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Out of Stock Items</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive h-100">
+                        <table class="table table-bordered" id="outOfStockTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Department</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in out_of_stock %}
+                                <tr>
+                                    <td>{{ item.item.item_name }}</td>
+                                    <td>{{ item.department.Department_name }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4 h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Transactions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive h-100">
+                        <table class="table table-bordered" id="recentTransactionsTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Item</th>
+                                    <th>Quantity</th>
+                                    <th>Department</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in recent_transactions %}
+                                <tr>
+                                    <td>{{ transaction.date_added|date:"Y-m-d" }}</td>
+                                    <td>{{ transaction.item.item_name }}</td>
+                                    <td>{{ transaction.quantity }}</td>
+                                    <td>{{ transaction.department.Department_name }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Row: Monthly Stock Trends and Expiring Items -->
+    <div class="row row-eq-height medium-row">
+        <!-- Monthly Stock Trends Chart -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4 h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Monthly Stock Trends</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area h-100">
+                        <canvas id="monthlyStockTrendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expiring Items -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4 h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Expiring Items</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive h-100">
+                        <table class="table table-bordered" id="expiringItemsTable" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Expiry Date</th>
+                                    <th>Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in expiring_soon %}
+                                <tr>
+                                    <td>{{ item.item.item_name }}</td>
+                                    <td>{{ item.expiry_date|date:"Y-m-d" }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Parse the JSON data
+    var departments = JSON.parse('{{ departments_list|safe }}');
+    var topIssuedItems = JSON.parse('{{ top_issued_items|safe }}');
+    var stockTrends = JSON.parse('{{ stock_trends|safe }}');
+
+    // Stock Sizes by Departments Chart
+    var ctx = document.getElementById('departmentStockChart').getContext('2d');
+    var departmentStockChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: departments.map(dept => dept.Department_name),
+            datasets: [{
+                label: 'Stock Size',
+                data: departments.map(dept => dept.stock_size),
+                backgroundColor: 'rgba(78, 115, 223, 0.5)',
+                borderColor: 'rgba(78, 115, 223, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Top Issued Items Pie Chart
+    var ctx2 = document.getElementById('topIssuedItemsChart').getContext('2d');
+    var topIssuedItemsChart = new Chart(ctx2, {
+        type: 'pie',
+        data: {
+            labels: topIssuedItems.map(item => item.item__item_name),
+            datasets: [{
+                data: topIssuedItems.map(item => item.total_issued),
+                backgroundColor: [
+                    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'
+                ],
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            tooltips: {
+                backgroundColor: "rgb(255,255,255)",
+                bodyFontColor: "#858796",
+                borderColor: '#dddfeb',
+                borderWidth: 1,
+                xPadding: 15,
+                yPadding: 15,
+                displayColors: false,
+                caretPadding: 10,
+            },
+            legend: {
+                display: false
+            },
+            cutoutPercentage: 80,
+        },
+    });
+
+    // Monthly Stock Trends Chart
+    var ctx3 = document.getElementById('monthlyStockTrendsChart').getContext('2d');
+    var monthlyStockTrendsChart = new Chart(ctx3, {
+        type: 'line',
+        data: {
+            labels: stockTrends.map(trend => trend.month),
+            datasets: [{
+                label: 'Stock Added',
+                data: stockTrends.map(trend => trend.total_added),
+                lineTension: 0.3,
+                backgroundColor: "rgba(78, 115, 223, 0.05)",
+                borderColor: "rgba(78, 115, 223, 1)",
+                pointRadius: 3,
+                pointBackgroundColor: "rgba(78, 115, 223, 1)",
+                pointBorderColor: "rgba(78, 115, 223, 1)",
+                pointHoverRadius: 3,
+                pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
+                pointHoverBorderColor: "rgba(78, 115, 223, 1)",
+                pointHitRadius: 10,
+                pointBorderWidth: 2,
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 25,
+                    top: 25,
+                    bottom: 0
+                }
+            },
+            scales: {
+                xAxes: [{
+                    time: {
+                        unit: 'date'
+                    },
+                    gridLines: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        maxTicksLimit: 7
+                    }
+                }],
+                yAxes: [{
+                    ticks: {
+                        maxTicksLimit: 5,
+                        padding: 10,
+                    },
+                    gridLines: {
+                        color: "rgb(234, 236, 244)",
+                        zeroLineColor: "rgb(234, 236, 244)",
+                        drawBorder: false,
+                        borderDash: [2],
+                        zeroLineBorderDash: [2]
+                    }
+                }],
+            },
+            legend: {
+                display: false
+            },
+            tooltips: {
+                backgroundColor: "rgb(255,255,255)",
+                bodyFontColor: "#858796",
+                titleMarginBottom: 10,
+                titleFontColor: '#6e707e',
+                titleFontSize: 14,
+                borderColor: '#dddfeb',
+                borderWidth: 1,
+                xPadding: 15,
+                yPadding: 15,
+                displayColors: false,
+                intersect: false,
+                mode: 'index',
+                caretPadding: 10,
+            }
+        }
+    });
+</script>
+{% endblock %}

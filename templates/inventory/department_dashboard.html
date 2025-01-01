@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ department.Department_name }} Dashboard{% endblock %}
+
+{% block extra_styles %}
+    <!-- Bootstrap CSS -->
+{% endblock %}
+
+{% block content %}
+
+    <div class="container mt-5">
+        <h1>{{ department.Department_name }} Dashboard</h1>
+
+        <p><strong>Total Unique Items:</strong> {{ total_items }}</p>
+        <p><strong>Total Quantity in Stock:</strong> {{ total_quantity }}</p>
+        
+        <div class="row d-flex align-items-stretch">
+            <!-- Expired Items Card -->
+            <div class="col-lg-3 col-md-6 col-sm-12 mb-4">
+                <div class="card overflow-hidden h-100">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-9 fw-semibold">Inventory Overview</h5>
+                        <div class="row align-items-center">
+                            <div class="col-8">
+                                <h4 class="fw-semibold mb-3">Expired Items: {{ expired_count }} </h4>
+                                <div class="d-flex align-items-center mb-3">
+                                    <span class="me-1 rounded-circle bg-light-success round-20 d-flex align-items-center justify-content-center">
+                                        <i class="ti ti-arrow-up-left text-success"></i>
+                                    </span>
+                                    <p class="text-dark me-1 fs-3 mb-0">{{ expired_percentage|floatformat:2 }}%</p>
+                                    <p class="fs-3 mb-0">of stock</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Depreciated Items Card -->
+            <div class="col-lg-3 col-md-6 col-sm-12 mb-4">
+                <div class="card overflow-hidden h-100">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-9 fw-semibold">Inventory Overview</h5>
+                        <div class="row align-items-center">
+                            <div class="col-8">
+                                <h4 class="fw-semibold mb-3">Depreciated: {{ depreciated_count }} </h4>
+                                <div class="d-flex align-items-center mb-3">
+                                    <span class="me-1 rounded-circle bg-light-danger round-20 d-flex align-items-center justify-content-center">
+                                        <i class="ti ti-arrow-down-right text-danger"></i>
+                                    </span>
+                                    <p class="text-dark me-1 fs-3 mb-0">{{ depreciated_percentage|floatformat:2 }}%</p>
+                                    <p class="fs-3 mb-0">of Stock</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Low Stock Items Card -->
+            <div class="col-lg-3 col-md-6 col-sm-12 mb-4">
+                <div class="card overflow-hidden h-100">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-9 fw-semibold">Inventory Overview</h5>
+                        <div class="row align-items-center">
+                            <div class="col-8">
+                                <h4 class="fw-semibold mb-3">Low on Stock: {{ low_stock_count }} </h4>
+                                <div class="d-flex align-items-center mb-3">
+                                    <span class="me-1 rounded-circle bg-light-warning round-20 d-flex align-items-center justify-content-center">
+                                        <i class="ti ti-alert-triangle text-warning"></i>
+                                    </span>
+                                    <p class="text-dark me-1 fs-3 mb-0">{{ low_stock_percentage|floatformat:2 }}%</p>
+                                    <p class="fs-3 mb-0">of Stock</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Out of Stock Items Card -->
+            <div class="col-lg-3 col-md-6 col-sm-12 mb-4">
+                <div class="card overflow-hidden h-100">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-9 fw-semibold">Inventory Overview</h5>
+                        <div class="row align-items-center">
+                            <div class="col-8">
+                                <h4 class="fw-semibold mb-3">Out of Stock: {{ out_of_stock_count }} </h4>
+                                <div class="d-flex align-items-center mb-3">
+                                    <span class="me-1 rounded-circle bg-light-info round-20 d-flex align-items-center justify-content-center">
+                                        <i class="ti ti-refresh text-info"></i>
+                                    </span>
+                                    <p class="text-dark me-1 fs-3 mb-0">{{ out_of_stock_percentage|floatformat:2 }}%</p>
+                                    <p class="fs-3 mb-0">of Stock</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Table to display items -->
+        <table class="table mt-3">
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Date Added</th>
+                    <th>Added By</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in department_items %}
+                <tr>
+                    <td>{{ item.item_name }}</td>
+                    <td>{{ item.description }}</td>
+                    <td>{{ item.category }}</td>
+                    <td>{{ item.date_added }}</td>
+                    <td>{{ item.added_by }}</td>
+                    <td>
+                        <a href="{% url 'department_item_details' department.id item.id %}" class="btn btn-primary">View Details</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+{% endblock %}
+{% block extra_scripts %}
+
+    <!-- Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

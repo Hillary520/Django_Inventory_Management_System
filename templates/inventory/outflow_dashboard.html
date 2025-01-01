@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory Outflow Summary{% endblock %}
+
+{% block extra_styles %}
+    <!-- Bootstrap CSS -->
+{% endblock %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h1 class="mb-4">Inventory Outflow Summary</h1>
+        
+        <!-- Cost Overview Section -->
+        <section class="mb-5">
+            <h2 class="mb-3">Cost Overview</h2>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Cost of Outflow</h5>
+                            <p class="card-text text-success fs-4 fw-bold">UGX {{ total_cost|floatformat:2 }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Average Cost per Item</h5>
+                            <p class="card-text text-primary fs-4 fw-bold">UGX {{ avg_cost_per_item|floatformat:2 }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Highest Single Item Cost</h5>
+                            <p class="card-text text-danger fs-4 fw-bold">UGX {{ highest_single_item_cost|floatformat:2 }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Department Section -->
+        <section class="mb-5">
+            <h2 class="mb-3">Departments</h2>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Top Departments by Cost</h5>
+                            <canvas id="departmentCostChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Department Outflow Table</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Department</th>
+                                            <th>Total Items Issued</th>
+                                            <th>Total Cost(UGX)</th>
+                                            <th>Last Issue Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dept in department_data %}
+                                        <tr>
+                                            <td>{{ dept.department__Department_name }}</td>
+                                            <td>{{ dept.total_outflow }}</td>
+                                            <td>{{ dept.total_cost|floatformat:2 }}</td>
+                                            <td>{{ dept.last_issue_date|date:"Y-m-d" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Categories Section -->
+        <section class="mb-5">
+            <h2 class="mb-3">Categories</h2>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Outflow by Category (Cost)</h5>
+                            <canvas id="categoryCostChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Top Categories by Cost</h5>
+                            <ul class="list-group">
+                                {% for category in top_categories %}
+                                <li class="list-group-item">{{ category.item__category }}: UGX {{ category.total_cost|floatformat:2 }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Items Section -->
+        <section class="mb-5">
+            <h2 class="mb-3">Recent Outflow Items</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Item Name</th>
+                                    <th>Category</th>
+                                    <th>Quantity Issued</th>
+                                    <th>Unit Cost(UGX)</th>
+                                    <th>Total Cost(UGX)</th>
+                                    <th>Department</th>
+                                    <th>Issued To</th>
+                                    <th>Date Issued</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in recent_items %}
+                                <tr>
+                                    <td>{{ item.item.item_name }}</td>
+                                    <td>{{ item.item.category }}</td>
+                                    <td>{{ item.quantity_issued_out }}</td>
+                                    <td>{{ item.unit_cost|floatformat:2 }}</td>
+                                    <td>{{ item.calculated_total_cost|floatformat:2 }}</td>
+                                    <td>{{ item.department.Department_name }}</td>
+                                    <td>{{ item.issued_to.name }}</td>
+                                    <td>{{ item.date|date:"Y-m-d" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <script>
+        // Department Cost Chart
+        const departmentCostCtx = document.getElementById('departmentCostChart').getContext('2d');
+        new Chart(departmentCostCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for dept in department_data %}"{{ dept.department__Department_name }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Total Cost',
+                    data: [{% for dept in department_data %}{{ dept.total_cost }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value, index, values) {
+                                return 'UGX ' + value.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Category Cost Chart
+        const categoryCostCtx = document.getElementById('categoryCostChart').getContext('2d');
+        new Chart(categoryCostCtx, {
+            type: 'pie',
+            data: {
+                labels: [{% for category in category_data %}"{{ category.item__category }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for category in category_data %}{{ category.total_cost }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)',
+                    ]
+                }]
+            },
+            options: {
+                tooltips: {
+                    callbacks: {
+                        label: function(tooltipItem, data) {
+                            var dataset = data.datasets[tooltipItem.datasetIndex];
+                            var total = dataset.data.reduce(function(previousValue, currentValue, currentIndex, array) {
+                                return previousValue + currentValue;
+                            });
+                            var currentValue = dataset.data[tooltipItem.index];
+                            var percentage = Math.floor(((currentValue/total) * 100)+0.5);
+                            return data.labels[tooltipItem.index] + ": UGX " + currentValue.toFixed(2) + " (" + percentage + "%)";
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,14 @@
+<form method="post" action="{% url 'employee_create' %}" class="js-employee-create-form">
+  {% csrf_token %}
+  <div class="modal-header">
+    <h5 class="modal-title">Create New Employee</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  </div>
+  <div class="modal-body">
+    {% include 'inventory/partial_employee_form.html' %}
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+    <button type="submit" class="btn btn-primary">Create Employee</button>
+  </div>
+</form>

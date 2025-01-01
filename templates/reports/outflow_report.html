@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory Outflow Summary{% endblock %}
+
+{% block extra_styles %}
+    <style>
+        body {
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        .report-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #333;
+            padding-bottom: 1rem;
+        }
+        .report-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .report-section h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        .table {
+            font-size: 0.9rem;
+            width: 100%;
+            margin-bottom: 1rem;
+            border-collapse: collapse;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            text-align: left;
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+        }
+        .table td {
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+        }
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(0,0,0,.05);
+        }
+        canvas {
+            max-width: 100%;
+            height: auto !important;
+        }
+        @media print {
+            .container {
+                width: 100%;
+                max-width: none;
+                box-shadow: none;
+                padding: 0;
+                margin: 0;
+            }
+            .report-section {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                border: none;
+                box-shadow: none;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="report-header">
+        <h1>Outflow Summary</h1>
+        <p class="text-muted">Generated on {% now "F j, Y" %}</p>
+    </div>  
+
+    <div class="report-section">
+        <h2>Summary Statistics</h2>
+        <p><b>Total Issued Quantity:</b> {{ total_issued_quantity }}</p>
+        <p><b>Total Issued Cost:</b> UGX {{ total_issued_cost|floatformat:2 }}</p>
+        {% if most_issued_item %}
+            <p><b>Most Issued Item:</b> {{ most_issued_item.item__item_name }} (Quantity: {{ most_issued_item.total_quantity }}, Cost: UGX {{ most_issued_item.total_cost|floatformat:2 }})</p>
+        {% endif %}
+        {% if top_department %}
+            <p><b>Top Department:</b> {{ top_department.department__Department_name }} (Quantity: {{ top_department.total_quantity }}, Cost: UGX {{ top_department.total_cost|floatformat:2 }})</p>
+        {% endif %}
+    </div>
+
+    <div class="report-section">
+        <h2>Total by Department</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Department</th>
+                    <th>Total Quantity</th>
+                    <th>Total Cost(UGX)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dept in total_by_department %}
+                <tr>
+                    <td>{{ dept.department__Department_name }}</td>
+                    <td>{{ dept.total_quantity }}</td>
+                    <td>{{ dept.total_cost|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="report-section">
+        <h2>Total by Month</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th>Total Quantity</th>
+                    <th>Total Cost(UGX)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for month in total_by_month %}
+                <tr>
+                    <td>{{ month.month }}</td>
+                    <td>{{ month.total_quantity }}</td>
+                    <td>{{ month.total_cost|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="report-section">
+        <h2>Top 10 Issued Items</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Total Quantity</th>
+                    <th>Total Cost(UGX)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in top_items %}
+                <tr>
+                    <td>{{ item.item__item_name }}</td>
+                    <td>{{ item.total_quantity }}</td>
+                    <td>{{ item.total_cost|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="report-section">
+        <h2>Recent Issued Items</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Unit Cost(UGX)</th>
+                    <th>Total Cost(UGX)</th>
+                    <th>Issued To</th>
+                    <th>Department</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in issued_items %}
+                <tr>
+                    <td>{{ item.item.item_name }}</td>
+                    <td>{{ item.quantity_issued_out }}</td>
+                    <td>{{ item.unit_cost|floatformat:2 }}</td>
+                    <td>{{ item.total_cost|floatformat:2 }}</td>
+                    <td>{{ item.issued_to.name }}</td>
+                    <td>{{ item.department.Department_name }}</td>
+                    <td>{{ item.date|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}  

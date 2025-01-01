@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory Inflow Summary{% endblock %}
+
+{% block extra_styles %}
+    <style>
+        body {
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        .report-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #333;
+            padding-bottom: 1rem;
+        }
+        .report-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .report-section h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        .table {
+            font-size: 0.9rem;
+            width: 100%;
+            margin-bottom: 1rem;
+            border-collapse: collapse;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            text-align: left;
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+        }
+        .table td {
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+        }
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(0,0,0,.05);
+        }
+        canvas {
+            max-width: 100%;
+            height: 800px !important;
+            margin: auto;
+        }
+        @media print {
+            .container {
+                width: 100%;
+                max-width: none;
+                box-shadow: none;
+                padding: 0;
+                margin: 0;
+            }
+            .report-section {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                border: none;
+                box-shadow: none;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <div class="report-header">
+            <h1>Inventory Inflow Summary</h1>
+            <p class="text-muted">Generated on {% now "F j, Y" %}</p>
+        </div>
+    
+        <div class="report-section">
+            <h2>1. Overall Summary</h2>
+            <table class="table table-bordered">
+                <tr>
+                    <th>Total Quantity</th>
+                    <td>{{ overall_totals.total_quantity }}</td>
+                </tr>
+                <tr>
+                    <th>Total Value</th>
+                    <td>UGX {{ overall_totals.total_value|floatformat:2 }}</td>
+                </tr>
+            </table>
+        </div>
+    
+    
+        <div class="report-section">
+            <h2>2. Inflow by Item</h2>
+            <canvas id="itemInflowChart"></canvas>
+            <table class="table table-striped mt-3">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Total Quantity</th>
+                        <th>Total Value(UGX)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in total_quantities %}
+                    <tr>
+                        <td>{{ item.item__item_name }}</td>
+                        <td>{{ item.total_quantity }}</td>
+                        <td>{{ item.total_value|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    
+        <div class="report-section">
+            <h2>3. Inflow by Category</h2>
+            <canvas id="categoryInflowChart"></canvas>
+            <table class="table table-striped mt-3">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Total Quantity</th>
+                        <th>Total Value(UGX)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category in categories %}
+                    <tr>
+                        <td>{{ category.item__category }}</td>
+                        <td>{{ category.total_quantity }}</td>
+                        <td>{{ category.total_value|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    
+        <div class="report-section">
+            <h2>4. Inflow by Supplier</h2>
+            <canvas id="supplierInflowChart"></canvas>
+            <table class="table table-striped mt-3">
+                <thead>
+                    <tr>
+                        <th>Supplier</th>
+                        <th>Total Quantity</th>
+                        <th>Total Value(UGX)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for supplier in suppliers %}
+                    <tr>
+                        <td>{{ supplier.supplied_by }}</td>
+                        <td>{{ supplier.total_quantity }}</td>
+                        <td>{{ supplier.total_value|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    
+        <div class="report-section">
+            <h2>5. Delivery Summary</h2>
+            <table class="table table-striped mt-3">
+                <thead>
+                    <tr>
+                        <th>Delivery Number</th>
+                        <th>Supplier</th>
+                        <th>Total Quantity</th>
+                        <th>Total Value(UGX)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for delivery in delivery_summary %}
+                    <tr>
+                        <td>{{ delivery.delivery_number }}</td>
+                        <td>{{ delivery.supplied_by }}</td>
+                        <td>{{ delivery.total_quantity }}</td>
+                        <td>{{ delivery.total_value|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    
+        <div class="report-section">
+            <h2>6. Departmental Inflow</h2>
+            <canvas id="departmentInflowChart"></canvas>
+            <table class="table table-striped mt-3">
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th>Total Quantity</th>
+                        <th>Total Value(UGX)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dept in departmental_inflow %}
+                    <tr>
+                        <td>{{ dept.department__Department_name }}</td>
+                        <td>{{ dept.total_added }}</td>
+                        <td>{{ dept.total_value|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    
+        <div class="report-section">
+            <h2>7. Recent Stock History</h2>
+            <table class="table table-striped mt-3">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Item</th>
+                        <th>Quantity</th>
+                        <th>Unit Cost(UGX)</th>
+                        <th>Total Cost(UGX)</th>
+                        <th>Supplier</th>
+                        <th>Department</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in stock_history_table|slice:":20" %}
+                    <tr>
+                        <td>{{ stock.date_added }}</td>
+                        <td>{{ stock.item.item_name }}</td>
+                        <td>{{ stock.quantity }}</td>
+                        <td>{{ stock.unit_cost|floatformat:2 }}</td>
+                        <td>{{ stock.total_cost|floatformat:2 }}</td>
+                        <td>{{ stock.supplied_by }}</td>
+                        <td>{{ stock.department.Department_name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Item Inflow Chart
+    var ctx = document.getElementById('itemInflowChart').getContext('2d');
+    var itemInflowChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ total_quantities_chart|safe }}.map(item => item.item__item_name),
+            datasets: [{
+                label: 'Quantity',
+                data: {{ total_quantities_chart|safe }}.map(item => item.total_quantity),
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Value ($)',
+                data: {{ total_quantities_chart|safe }}.map(item => item.total_value),
+                backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Category Inflow Chart
+    var ctx = document.getElementById('categoryInflowChart').getContext('2d');
+    var categoryInflowChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: {{ categories_chart|safe }}.map(category => category.item__category),
+            datasets: [{
+                data: {{ categories_chart|safe }}.map(category => category.total_quantity),
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 206, 86, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(153, 102, 255, 0.6)',
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            var label = context.label || '';
+                            var value = context.raw || 0;
+                            var total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            var percentage = Math.round((value / total) * 100);
+                            return label + ': ' + value + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Supplier Inflow Chart
+    var ctx = document.getElementById('supplierInflowChart').getContext('2d');
+    var supplierInflowChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ labels|safe }},
+            datasets: [{
+                label: 'Quantity',
+                data: {{ quantities }},
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Value ($)',
+                data: {{ values }},
+                backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Department Inflow Chart
+    var ctx = document.getElementById('departmentInflowChart').getContext('2d');
+    var departmentInflowChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ departmental_inflow_chart|safe }}.map(dept => dept.department__Department_name),
+            datasets: [{
+                label: 'Quantity',
+                data: {{ departmental_inflow_chart|safe }}.map(dept => dept.total_added),
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Value ($)',
+                data: {{ departmental_inflow_chart|safe }}.map(dept => dept.total_value),
+                backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

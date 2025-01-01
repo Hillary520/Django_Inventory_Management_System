@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Staff list{% endblock %}
+
+{% block extra_styles %}
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap5.min.css">
+{% endblock %}
+
+{% block content %}
+  <h1 class="my-4">Staff</h1>
+  <div class="mb-3 text-end">
+    <button type="button" class="btn btn-primary js-create-employee" data-url="{% url 'employee_create' %}">
+      <span class="fas fa-plus"></span>
+      New Employee
+    </button>
+  </div>
+  <table id="employee-table" class="table table-striped">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Department</th>
+        <th>Title</th>
+        <th>Office</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+  </table>
+
+  <div class="modal fade" id="modal-employee">
+    <div class="modal-dialog">
+      <div class="modal-content"></div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap5.min.js"></script>
+  <script>
+    $(function () {
+      var table = $('#employee-table').DataTable({
+        ajax: "{% url 'employee_list' %}",
+        columns: [
+          {data: 'name'},
+          {data: 'department'},
+          {data: 'title'},
+          {data: 'office'},
+          {
+            data: 'id',
+            render: function(data, type, row) {
+              return '<button type="button" class="btn btn-warning btn-sm js-update-employee" data-url="/employees/' + data + '/update/">Edit</button> ' +
+                     '<button type="button" class="btn btn-danger btn-sm js-delete-employee" data-url="/employees/' + data + '/delete/">Delete</button>';
+            }
+          }
+        ]
+      });
+
+      function loadForm(url) {
+        $.ajax({
+          url: url,
+          type: 'get',
+          dataType: 'json',
+          beforeSend: function () {
+            $("#modal-employee .modal-content").html("");
+            $("#modal-employee").modal("show");
+          },
+          success: function (data) {
+            $("#modal-employee .modal-content").html(data.html_form);
+          }
+        });
+      }
+
+      function saveForm(e) {
+        e.preventDefault();
+        var form = $(this);
+        $.ajax({
+          url: form.attr("action"),
+          data: form.serialize(),
+          type: form.attr("method"),
+          dataType: 'json',
+          success: function (data) {
+            if (data.form_is_valid) {
+              table.ajax.reload();
+              $("#modal-employee").modal("hide");
+            } else {
+              $("#modal-employee .modal-content").html(data.html_form);
+            }
+          }
+        });
+      }
+
+      // Create employee
+      $(".js-create-employee").click(function() {
+        loadForm($(this).data("url"));
+      });
+
+      // Update employee
+      $("#employee-table").on("click", ".js-update-employee", function() {
+        loadForm($(this).data("url"));
+      });
+
+      // Delete employee
+      $("#employee-table").on("click", ".js-delete-employee", function() {
+        loadForm($(this).data("url"));
+      });
+
+      // Form submission
+      $("#modal-employee").on("submit", ".js-employee-create-form, .js-employee-update-form, .js-employee-delete-form", saveForm);
+    });
+  </script>
+{% endblock %}

@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory Expenditure Summary{% endblock %}
+
+{% block extra_styles %}
+    <style>
+        body {
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        .report-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #333;
+            padding-bottom: 1rem;
+        }
+        .report-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .report-section h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        .table {
+            font-size: 0.9rem;
+            width: 100%;
+            margin-bottom: 1rem;
+            border-collapse: collapse;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            text-align: left;
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+        }
+        .table td {
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+        }
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(0,0,0,.05);
+        }
+        canvas {
+            max-width: 100%;
+            height: auto !important;
+        }
+        @media print {
+            .container {
+                width: 100%;
+                max-width: none;
+                box-shadow: none;
+                padding: 0;
+                margin: 0;
+            }
+            .report-section {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                border: none;
+                box-shadow: none;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="report-header">
+        <h1>Expenditure Summary</h1>
+        <p class="text-muted">Generated on {% now "F j, Y" %}</p>
+    </div>
+
+    <section class="mt-4">
+        <h2>Summary</h2>
+        <p>Total Inventory Cost: UGX {{ total_inventory_cost }}</p>
+    </section>
+
+    <div class="report-section">
+        <h2>Department Section</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Department</th>
+                    <th>Total Cost(UGX)</th>
+                    <th>Issued Out</th>
+                    <th>Items</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in department_data %}
+                <tr>
+                    <td>{{ data.department.Department_name }}</td>
+                    <td>{{ data.total_cost }}</td>
+                    <td>{{ data.issued_out_value }}</td>
+                    <td>
+                        <ul>
+                            {% for item in data.items %}
+                            <li>{{ item.item_name }} - {{ item.total_item_cost }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <canvas id="departmentGraph" class="mt-4"></canvas>
+    </div>
+
+    <div class="report-section">
+        <h2>Categories Section</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Total Cost(UGX)</th>
+                    <th>Issued Out</th>
+                    <th>Items</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in category_data %}
+                <tr>
+                    <td>{{ data.category.Category_name }}</td>
+                    <td>{{ data.total_cost }}</td>
+                    <td>{{ data.issued_out_value }}</td>
+                    <td>
+                        <ul>
+                            {% for item in data.items %}
+                            <li>{{ item.item_name }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <canvas id="categoryGraph" class="mt-4"></canvas>
+    </div>
+
+    <div class="report-section">
+        <h2>Items Section</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Total Cost(UGX)</th>
+                    <th>Issued Out</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in item_data %}
+                <tr>
+                    <td>{{ data.item.item_name }}</td>
+                    <td>{{ data.total_cost }}</td>
+                    <td>{{ data.issued_out_value }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <canvas id="itemGraph" class="mt-4"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Department Graph
+    var ctx = document.getElementById('departmentGraph').getContext('2d');
+    var departmentGraph = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [{% for data in department_data %}'{{ data.department.Department_name }}',{% endfor %}],
+            datasets: [{
+                label: 'Total Cost',
+                data: [{% for data in department_data %}{{ data.total_cost }},{% endfor %}],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'Issued Out Value',
+                data: [{% for data in department_data %}{{ data.issued_out_value }},{% endfor %}],
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Category Graph
+    var ctx = document.getElementById('categoryGraph').getContext('2d');
+    var categoryGraph = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [{% for data in category_data %}'{{ data.category.Category_name }}',{% endfor %}],
+            datasets: [{
+                label: 'Total Cost',
+                data: [{% for data in category_data %}{{ data.total_cost }},{% endfor %}],
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'Issued Out Value',
+                data: [{% for data in category_data %}{{ data.issued_out_value }},{% endfor %}],
+                backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                borderColor: 'rgba(255, 206, 86, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Item Graph
+    var ctx = document.getElementById('itemGraph').getContext('2d');
+    var itemGraph = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [{% for data in item_data %}'{{ data.item.item_name }}',{% endfor %}],
+            datasets: [{
+                label: 'Total Cost',
+                data: [{% for data in item_data %}{{ data.total_cost }},{% endfor %}],
+                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                borderColor: 'rgba(153, 102, 255, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'Issued Out Value',
+                data: [{% for data in item_data %}{{ data.issued_out_value }},{% endfor %}],
+                backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                borderColor: 'rgba(255, 159, 64, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

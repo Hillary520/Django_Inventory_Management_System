@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Issue Voucher Numbers{% endblock %}
+
+{% block extra_styles %}
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.css" />
+    <style>
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.25em 0.5em;
+        }
+        .dataTables_wrapper .dataTables_length select {
+            padding-right: 1.5rem;
+        }
+    </style>
+    
+{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h1>Issue Voucher Numbers</h1>
+        <table class="table table-striped" id="ivnTable">
+            <thead>
+                <tr>
+                    <th>Issue Voucher Number</th>
+                    <th>Date</th>
+                    <th>Department</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ivn in ivns %}
+                <tr>
+                    <td>{{ ivn.issue_voucher_number }}</td>
+                    <td>{{ ivn.latest_date|date:"Y-m-d" }}</td>
+                    <td>{{ ivn.department }}</td>
+                    <td><button class="btn btn-primary btn-sm view-details" data-ivn="{{ ivn.issue_voucher_number }}">View Details</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="ivnModal" tabindex="-1" aria-labelledby="ivnModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ivnModalLabel">Issue Voucher Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>Issue Voucher Number: <span id="modalIvn"></span></h6>
+                    <p>Total Items: <span id="totalItems"></span></p>
+                    <p>Total Value: UGX <span id="totalValue"></span></p>
+                    <h6>Items:</h6>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Description</th>
+                                <th>Quantity</th>
+                                <th>Issued To</th>
+                                <th>Office</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalItemsBody">
+                            <!-- This will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            new DataTable('#ivnTable');
+            // Handle click on "View Details" button
+            $(document).on("click", ".view-details", function() {
+                const ivn = $(this).data("ivn");
+                
+                // Fetch IVN details using AJAX
+                $.ajax({
+                    url: '{% url "ivn_detail" %}',
+                    data: { ivn: ivn },
+                    dataType: 'json',
+                    success: function(data) {
+                        $("#modalIvn").text(data.ivn);
+                        $("#totalItems").text(data.total_items);
+                        $("#totalValue").text(data.total_value.toFixed(2));
+
+                        const modalItemsBody = $("#modalItemsBody");
+                        modalItemsBody.empty();
+                        data.items.forEach(item => {
+                            modalItemsBody.append(`
+                                <tr>
+                                    <td>${item.item}</td>
+                                    <td>${item.description}</td>
+                                    <td>${item.quantity}</td>
+                                    <td>${item.issued_to}</td>
+                                    <td>${item.office}</td>
+                                </tr>
+                            `);
+                        });
+
+                        $("#ivnModal").modal("show");
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        console.error("AJAX error: " + textStatus + ' : ' + errorThrown);
+                    }
+                });
+            });
+        });
+    </script>
+
+{% endblock %}

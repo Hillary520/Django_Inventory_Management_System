@@ -1,0 +1,463 @@
+{% extends 'base.html' %}
+
+{% block title %}All Delivered Items{% endblock %}
+
+{% block extra_styles %}
+    <style>
+    .container-fluid {
+        flex: 1 0 auto;
+        width: 100%;
+        max-width: none;
+    }
+    #filters {
+        margin-left: -10px;
+        margin-right: -10px
+    }
+    #applyFilters, #resetFilters, #printTable {
+        margin-left: 10px;
+    }
+    .btn-view-more {
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        transition: all 0.3s ease;
+    }
+    .btn-view-more:hover {
+        transform: scale(1.05);
+    }
+    .modal-content {
+        border-radius: 15px;
+    }
+    .modal-body {
+        padding: 20px;
+    }
+    .card {
+        width: 100%;
+        margin: 0 auto;
+    }   
+    .card-body {
+        overflow: hidden;
+    }
+    .table {
+        width: 100%;
+    }
+    .engraved-number-item {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+    }
+    .engraved-number-item:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <h1>All Delivered Items</h1>
+
+        <!-- Filter options -->
+        <div class="row mb-3" id="filters">
+            <div class="col-md-3">
+                <select id="categoryFilter" class="form-select">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.Category_name }}">{{ category.Category_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="departmentFilter" class="form-select">
+                    <option value="">All Departments</option>
+                    {% for department in departments %}
+                    <option value="{{ department.Department_name }}">{{ department.Department_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="date" id="dateFilter" class="form-control">
+            </div>
+            <div class="col-md-3 d-flex d-flex justify-content-between">
+                <button id="applyFilters" class="btn btn-primary">Apply Filters</button>
+                <button id="resetFilters" class="btn btn-secondary">Reset Filters</button>
+                <button id="printTable" class="btn btn-primary">Print</button>
+            </div>
+        </div>
+
+        <!-- Totals -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <strong>Total Items:</strong> <span id="totalItems">{{ totals.total_items }}</span>
+            </div>
+            <div class="col-md-4">
+                <strong>Total Cost:</strong> UGX <span id="totalCost">{{ totals.total_cost|floatformat:2 }}</span>
+            </div>
+        </div>
+
+        <!-- Delivered Items Table -->
+        <div class="container-fluid wide-container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="mb-4">Delivered Items</h1>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="card h-auto d-flex flex-column">
+                    <div class="card-body">
+                        <table class="table table-striped" id="deliveredItemsTable">
+                            <thead>
+                                <tr>
+                                    <th>Item Name</th>
+                                    <th>Category</th>
+                                    <th>Department</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Cost (UGX)</th>
+                                    <th>Total Cost (UGX)</th>
+                                    <th>Date Added</th>
+                                    <th>Added By</th>
+                                    <th>LPO</th>
+                                    <th>Supplied By</th>
+                                    <th>Delivery Number</th>
+                                    <th>Engraved Numbers</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in delivered_items %}
+                                <tr>
+                                    <td>{{ item.item_name }}</td>
+                                    <td>{{ item.category }}</td>
+                                    <td>{{ item.department }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>{{ item.unit_cost|floatformat:2 }}</td>
+                                    <td>{{ item.total_cost|floatformat:2 }}</td>
+                                    <td>{{ item.date_added|date:"Y-m-d" }}</td>
+                                    <td>{{ item.added_by }}</td>
+                                    <td>{{ item.lpo }}</td>
+                                    <td>{{ item.supplied_by }}</td>
+                                    <td>{{ item.delivery_number }}</td>
+                                    <td>{{ item.engraved_number }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        
+    <!-- Modal -->
+    <div class="modal fade" id="engravedNumbersModal" tabindex="-1" aria-labelledby="engravedNumbersModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="engravedNumbersModalLabel">Engraved Numbers</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="engravedNumbersList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        $(document).ready(function() {
+    let allItems = [];
+    
+    // Store all items in JavaScript array
+    {% for item in delivered_items %}
+        allItems.push({
+            itemName: "{{ item.item_name }}",
+            category: "{{ item.category }}",
+            department: "{{ item.department }}",
+            quantity: {{ item.quantity }},
+            unitCost: {{ item.unit_cost }},
+            totalCost: {{ item.total_cost }},
+            dateAdded: "{{ item.date_added|date:'Y-m-d' }}",
+            addedBy: "{{ item.added_by }}",
+            lpo: "{{ item.lpo }}",
+            suppliedBy: "{{ item.supplied_by }}",
+            deliveryNumber: "{{ item.delivery_number }}",
+            engravedNumber: "{{ item.engraved_number }}"
+        });
+    {% endfor %}
+
+    function groupItems(items) {
+        let groupedItems = {};
+        items.forEach(item => {
+            let key = `${item.itemName}-${item.dateAdded}-${item.deliveryNumber}`;
+            if (!groupedItems[key]) {
+                groupedItems[key] = {...item, quantity: 0, totalCost: 0, engravedNumbers: []};
+            }
+            groupedItems[key].quantity += item.quantity;
+            groupedItems[key].totalCost += item.totalCost;
+            if (item.engravedNumber && !groupedItems[key].engravedNumbers.includes(item.engravedNumber)) {
+                groupedItems[key].engravedNumbers.push(item.engravedNumber);
+            }
+        });
+        return Object.values(groupedItems);
+    }
+
+    function updateTable(items) {
+        let tableBody = $('#deliveredItemsTable tbody');
+        tableBody.empty();
+
+        items.forEach((item, index) => {
+            let unitCost = item.totalCost / item.quantity;
+            let engravedNumbersHTML = '';
+            
+            if (item.engravedNumbers && item.engravedNumbers.length > 0) {
+                if (item.engravedNumbers.length > 1) {
+                    engravedNumbersHTML = `
+                        <button class="btn btn-view-more btn-info" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                            View ${item.engravedNumbers.length} Numbers
+                            <i class="fas fa-chevron-down ms-2"></i>
+                        </button>
+                    `;
+                } else {
+                    engravedNumbersHTML = `<div>${item.engravedNumbers[0]}</div>`;
+                }
+            } else {
+                engravedNumbersHTML = '<div>No engraved numbers</div>';
+            }
+
+            tableBody.append(`
+                <tr>
+                    <td>${item.itemName}</td>
+                    <td>${item.category}</td>
+                    <td>${item.department}</td>
+                    <td>${item.quantity}</td>
+                    <td>${unitCost.toFixed(2)}</td>
+                    <td>${item.totalCost.toFixed(2)}</td>
+                    <td>${item.dateAdded}</td>
+                    <td>${item.addedBy}</td>
+                    <td>${item.lpo}</td>
+                    <td>${item.suppliedBy}</td>
+                    <td>${item.deliveryNumber}</td>
+                    <td>${engravedNumbersHTML}</td>
+                </tr>
+            `);
+
+            if (item.engravedNumbers.length > 1) {
+                tableBody.append(`
+                    <tr class="expandable-row">
+                        <td colspan="12">
+                            <div class="collapse expandable-content" id="collapse${index}">
+                                ${item.engravedNumbers.map(number => `<div class="engraved-number-item">${number}</div>`).join('')}
+                            </div>
+                        </td>
+                    </tr>
+                `);
+            }
+        });
+
+        // Add click event listener to the "View More" buttons
+        $('.btn-view-more').click(function() {
+            $(this).find('i').toggleClass('rotate');
+        });
+    }
+        
+    
+        function applyFilters() {
+            let category = $('#categoryFilter').val();
+            let department = $('#departmentFilter').val();
+            let date = $('#dateFilter').val();
+    
+            let filteredItems = allItems.filter(item => 
+                (category === "" || item.category === category) &&
+                (department === "" || item.department === department) &&
+                (date === "" || item.dateAdded === date)
+            );
+    
+            let groupedItems = groupItems(filteredItems);
+            console.log("Grouped items:", groupedItems); // Debug log
+            updateTable(groupedItems);
+            updateTotals(groupedItems);
+        }
+    
+        function updateTotals(items) {
+            let totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+            let totalCost = items.reduce((sum, item) => sum + item.totalCost, 0);
+    
+            $('#totalItems').text(totalItems);
+            $('#totalCost').text(totalCost.toFixed(2));
+        }
+    
+        $('#applyFilters').click(applyFilters);
+    
+        $('#resetFilters').click(function() {
+            $('#categoryFilter').val('');
+            $('#departmentFilter').val('');
+            $('#dateFilter').val('');
+            let groupedItems = groupItems(allItems);
+            updateTable(groupedItems);
+            updateTotals(groupedItems);
+        });
+    
+        // Initial load
+        let initialGroupedItems = groupItems(allItems);
+        updateTable(initialGroupedItems);
+        updateTotals(initialGroupedItems);
+    
+
+        
+        function printTable() {
+        let category = $('#categoryFilter').val();
+        let department = $('#departmentFilter').val();
+        let date = $('#dateFilter').val();
+
+        let filteredItems = allItems.filter(item => 
+            (category === "" || item.category === category) &&
+            (department === "" || item.department === department) &&
+            (date === "" || item.dateAdded === date)
+        );
+
+        let groupedItems = groupItems(filteredItems);
+        let totalItems = groupedItems.reduce((sum, item) => sum + item.quantity, 0);
+        let totalCost = groupedItems.reduce((sum, item) => sum + item.totalCost, 0);
+        let totalRemaining = 0; // You'll need to calculate this based on your business logic
+
+        let printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Delivered Items Report</title>
+                <style>
+                    body { 
+                        font-family: 'Times New Roman', Times, serif; 
+                        font-size: 14px;
+                        margin: 20px;
+                    }
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin-top: 20px;
+                    }
+                    th, td { 
+                        border: 1px solid #000; 
+                        padding: 10px; 
+                        text-align: left; 
+                    }
+                    th { 
+                        background-color: #f2f2f2; 
+                        font-weight: bold;
+                        text-align: center;
+                    }
+                    h1, h2, h3 { 
+                        margin: 0; 
+                    }
+                    .header, .totals {
+                        text-align: center; 
+                        margin-top: 20px;
+                    }
+                    .totals { 
+                        margin-top: 30px;
+                    }
+                    @media print {
+                        .no-print { 
+                            display: none; 
+                        }
+                        .footer {
+                            position: fixed;
+                            bottom: 0;
+                            left: 0;
+                            width: 100%;
+                            text-align: center;
+                            font-size: 12px;
+                            padding: 10px;
+                            background-color: #f2f2f2;
+                            border-top: 1px solid #000;
+                        }
+                    }
+                    .button-container {
+                        text-align: center; 
+                        margin-top: 20px;
+                    }
+                    .button-container button {
+                        padding: 10px 20px;
+                        font-size: 14px;
+                    }
+                    @page {
+                        size: landscape;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Delivered Items Report</h1>
+                    <p><strong>Category:</strong> ${category || 'All'}</p>
+                    <p><strong>Department:</strong> ${department || 'All'}</p>
+                    <p><strong>Date:</strong> ${date || 'All'}</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Category</th>
+                            <th>Department</th>
+                            <th>Quantity</th>
+                            <th>Unit Cost (UGX)</th>
+                            <th>Total Cost (UGX)</th>
+                            <th>Date Added</th>
+                            <th>Added By</th>
+                            <th>LPO</th>
+                            <th>Supplied By</th>
+                            <th>Delivery Number</th>
+                            <th>Engraved Numbers</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${groupedItems.map(item => `
+                            <tr>
+                                <td>${item.itemName}</td>
+                                <td>${item.category}</td>
+                                <td>${item.department}</td>
+                                <td>${item.quantity}</td>
+                                <td>${(item.totalCost / item.quantity).toFixed(2)}</td>
+                                <td>${item.totalCost.toFixed(2)}</td>
+                                <td>${item.dateAdded}</td>
+                                <td>${item.addedBy}</td>
+                                <td>${item.lpo}</td>
+                                <td>${item.suppliedBy}</td>
+                                <td>${item.deliveryNumber}</td>
+                                <td>${item.engravedNumbers.join(', ')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <div class="totals">
+                    <p><strong>Total Items:</strong> ${totalItems}</p>
+                    <p><strong>Total Cost:</strong> UGX ${totalCost.toFixed(2)}</p>
+                </div>
+                <div class="footer">
+                    <p>Delivered Items Report</p>
+                </div>
+            </body>
+            </html>
+        `);
+        // Close the document to complete the writing process
+        printWindow.document.close();
+        
+        // Wait for the content to load, then trigger print
+        printWindow.onload = function() {
+            printWindow.print();
+            // Close the print window after a delay
+            setTimeout(function() {
+                printWindow.close();
+            }, 0); // Adjust the delay as needed
+        };
+    }
+    $('#printTable').click(printTable);
+    });
+    </script>
+{% endblock %}

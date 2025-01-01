@@ -1,0 +1,14 @@
+<form method="post" action="{% url 'employee_delete' employee.pk %}" class="js-employee-delete-form">
+  {% csrf_token %}
+  <div class="modal-header">
+    <h5 class="modal-title">Confirm Employee Deletion</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  </div>
+  <div class="modal-body">
+    <p>Are you sure you want to delete the employee "{{ employee.name }}"?</p>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+    <button type="submit" class="btn btn-danger">Delete Employee</button>
+  </div>
+</form>

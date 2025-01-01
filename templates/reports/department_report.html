@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ department.Department_name }} Department Summary{% endblock %}
+
+{% block extra_styles %}
+    <style>
+        body {
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        .container {
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        .report-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #333;
+            padding-bottom: 1rem;
+        }
+        .report-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .report-section h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        .table {
+            font-size: 0.9rem;
+            width: 100%;
+            margin-bottom: 1rem;
+            border-collapse: collapse;
+        }
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            text-align: left;
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+        }
+        .table td {
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+        }
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(0,0,0,.05);
+        }
+        canvas {
+            max-width: 100%;
+            height: 800px !important;
+            margin: auto;
+        }
+        @media print {
+            .container {
+                width: 100%;
+                max-width: none;
+                box-shadow: none;
+                padding: 0;
+                margin: 0;
+            }
+            .report-section {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                border: none;
+                box-shadow: none;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="report-header">
+        <h1 class="mb-0">{{ department.Department_name }} Department Summary</h1>
+        <p class="text-muted">Generated on {% now "F j, Y" %}</p>
+    </div>
+
+    <div class="report-section">
+        <h2>1. Executive Summary</h2>
+        <p>This report provides an overview of the current inventory status for the {{ department.Department_name }} department.</p>
+        <table class="table table-bordered">
+            <tr>
+                <th>Total Items</th>
+                <td>{{ total_quantity }}</td>
+            </tr>
+            <tr>
+                <th>Total Value</th>
+                <td>UGX {{ total_value|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th>Total Issued Quantity</th>
+                <td>{{ total_issued_quantity }}</td>
+            </tr>
+            <tr>
+                <th>Total Issued Value</th>
+                <td>UGX {{ total_issued_value|floatformat:2 }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="report-section">
+        <h2>2. Inventory Distribution</h2>
+        <canvas id="inventoryDistributionChart"></canvas>
+    </div>
+
+    <div class="report-section">
+        <h2>3. Stock Movement Trends</h2>
+        <canvas id="stockMovementChart"></canvas>
+    </div>
+
+    <div class="report-section">
+        <h2>4. Issued Items Distribution</h2>
+        <canvas id="issuedItemsChart"></canvas>
+    </div>
+
+    <div class="report-section">
+        <h2>5. Recent Stock History</h2>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Item</th>
+                        <th>Quantity</th>
+                        <th>Unit Cost(UGX)</th>
+                        <th>Total Cost(UGX)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in stock_history|slice:":10" %}
+                    <tr>
+                        <td>{{ stock.date_added }}</td>
+                        <td>{{ stock.item.item_name }}</td>
+                        <td>{{ stock.quantity }}</td>
+                        <td>{{ stock.unit_cost|floatformat:2 }}</td>
+                        <td>{{ stock.total_cost|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="report-section">
+        <h2>6. Recent Issued Out History</h2>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Item</th>
+                        <th>Quantity</th>
+                        <th>Issued To</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for issued in issued_history|slice:":10" %}
+                    <tr>
+                        <td>{{ issued.date }}</td>
+                        <td>{{ issued.item.item_name }}</td>
+                        <td>{{ issued.quantity_issued_out }}</td>
+                        <td>{{ issued.issued_to.name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}    
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Parse the JSON data
+    var chartData = JSON.parse('{{ chart_data_json|safe }}');
+    
+    // Inventory Distribution Chart
+    var ctx = document.getElementById('inventoryDistributionChart').getContext('2d');
+    var inventoryChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: chartData.item_distribution.labels,
+            datasets: [{
+                label: 'Quantity',
+                data: chartData.item_distribution.quantities,
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Value (UGX)',
+                data: chartData.item_distribution.values,
+                backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Inventory Distribution by Item'
+                }
+            }
+        }
+    });
+
+    // Stock Movement Chart
+    var ctx = document.getElementById('stockMovementChart').getContext('2d');
+    var stockChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartData.stock_movement.dates,
+            datasets: [{
+                label: 'Stock Added',
+                data: chartData.stock_movement.added,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }, {
+                label: 'Stock Issued',
+                data: chartData.stock_movement.issued,
+                borderColor: 'rgb(255, 99, 132)',
+                tension: 0.1
+            }, {
+                label: 'Value Added ($)',
+                data: chartData.stock_movement.value_added,
+                borderColor: 'rgb(54, 162, 235)',
+                tension: 0.1
+            }, {
+                label: 'Value Issued ($)',
+                data: chartData.stock_movement.value_issued,
+                borderColor: 'rgb(255, 206, 86)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Stock Movement Trends'
+                }
+            }
+        }
+    });
+
+    // Issued Items Distribution Chart
+    var ctx = document.getElementById('issuedItemsChart').getContext('2d');
+    var issuedItemsChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: chartData.issued_items_distribution.labels,
+            datasets: [{
+                data: chartData.issued_items_distribution.quantities,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 206, 86, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(153, 102, 255, 0.6)',
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Issued Items Distribution'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            var label = context.label || '';
+                            var value = context.raw || 0;
+                            var total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            var percentage = Math.round((value / total) * 100);
+                            return label + ': ' + value + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

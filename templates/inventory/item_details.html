@@ -1,0 +1,543 @@
+{% extends 'base.html' %}
+
+{% block title %}Item Details{% endblock %}
+
+{% block extra_styles %}
+    <!-- Bootstrap CSS -->
+{% endblock %}
+
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h1>Item Details</h1>
+        <div>
+            <h3>{{ item.item_name }}</h3>
+            <p><strong>Description:</strong> {{ item.description }}</p>
+            <p><strong>Category:</strong> {{ item.category }}</p>
+            <p><strong>Date Added:</strong> {{ item.date_added }}</p>
+            <p><strong>Added By:</strong> {{ item.added_by }}</p>
+        </div>
+
+        <!-- Add New Stock Button -->
+        <button type="button" class="btn btn-success" data-toggle="modal" data-target="#addStockModal">
+            Add New Stock
+        </button>
+        
+        
+        <!-- Quantity Table -->
+        <h2>Stock Balances per Department</h2>
+        <table class="table table-bordered mt-3">
+            <thead>
+                <tr>
+                    <th>Department</th>
+                    <th>Balance</th>
+                    <th>Expiry Date</th>
+                    <th>Depreciation Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for qty in quantities %}
+                <tr>
+                    <td>{{ qty.department.Department_name }}</td>
+                    <td>{{ qty.quantity }}</td>
+                    <td>{{ qty.expiry_date }}</td>
+                    <td>{{ qty.depreciation_date }}</td>
+                    <td>
+                        <button type="button" id="issueOutBtn" class="btn btn-warning btn-sm issueOutBtn" data-toggle="modal" data-target="#issueOutModal" 
+                                data-item-id="{{ item.id }}" data-quantity-id="{{ qty.id }}" data-department-id="{{ qty.department.id }}">
+                            Issue Out
+                        </button>
+                        
+                        <button type="button" id="EngravedIssueOutBtn" class="btn btn-info btn-sm EngravedIssueOutBtn" data-toggle="modal" data-target="#EngravedIssueOutModal" 
+                                data-item-id="{{ item.id }}" data-quantity-id="{{ qty.id }}" data-department-id="{{ qty.department.id }}" style="display:none">
+                            Issue Out
+                        </button>
+                        
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    
+        <!-- Stock History Table -->
+        <h2>Stock History</h2>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Quantity Delivered</th>
+                    <th>Supplier</th>
+                    <th>LPO</th>
+                    <th>Delivery Number</th>
+                    <th>Added By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in stock_history %}
+                    <tr>
+                        <td>{{ record.date_added }}</td>
+                        <td>{{ record.quantity }}</td>
+                        <td>{{ record.supplied_by }}</td>
+                        <td>{{ record.lpo }}</td>
+                        <td>{{ record.delivery_number }}</td>
+                        <td>{{ record.added_by }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Issued Out History Table -->
+        <h2>Issued Out History</h2>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Quantity Issued</th>
+                    <th>Issued To</th>
+                    <th>Department</th>
+                    <th>Office</th>
+                    <th>Issue Voucher Number</th>
+                    <th>Issued By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in issued_out_history %}
+                    <tr>
+                        <td>{{ record.date }}</td>
+                        <td>{{ record.quantity_issued_out }}</td>
+                        <td>{{ record.issued_to.name }}</td>
+                        <td>{{ record.department.Department_name }}</td>
+                        <td>{{ record.office }}</td>
+                        <td>{{ record.issue_voucher_number }}</td>
+                        <td>{{ record.issued_by }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Stock Modal -->
+        <div class="modal fade" id="addStockModal" tabindex="-1" role="dialog" aria-labelledby="addStockModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addStockModalLabel">Add New Stock for {{ item.item_name }}</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Form will be loaded here -->
+                        <form id="add-stock-form" method="post" novalidate>
+                            {% csrf_token %}
+                            {{ stock_form|crispy }}
+                            <div id="engraved-numbers-container" class="mb-3"></div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="submit-stock-form">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <!-- Issue Out Modal -->
+        <div class="modal fade" id="issueOutModal" tabindex="-1" role="dialog" aria-labelledby="issueOutModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="issueOutModalLabel">Issue Out Item</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Issue Out Form -->
+                        <form id="issue-out-form" method="post" novalidate>
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="issueQuantity">Quantity:</label>
+                                <input type="number" class="form-control" id="issueQuantity" name="quantity" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="issueVoucherNumber">Issue Voucher Number:</label>
+                                <input type="text" class="form-control" id="issueVoucherNumber" name="issue_voucher_number" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="employeeSearch">Issued To:</label>
+                                <input type="text" id="employeeSearch" class="form-control" placeholder="Search for an employee..." autocomplete="off">
+                                <div id="employeeResults" class="list-group mt-2"></div>
+                                <input type="hidden" name="issued_to" id="selectedEmployeeId">
+                            </div>
+                            <input type="hidden" name="item_id" id="modalItemId">
+                            <input type="hidden" name="quantity_id" id="modalQuantityId">
+                            <input type="hidden" name="department_id" id="modalDepartmentId">
+                        </form>
+                        <div class="text-right">
+                            <button type="button" class="btn btn-link" data-toggle="modal" data-target="#addEmployeeModal">
+                                Add New Staff
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="submitIssueOutForm">Issue Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <!-- Engraved Issue Out Modal -->
+        <div class="modal fade" id="EngravedIssueOutModal" tabindex="-1" role="dialog" aria-labelledby="issueOutModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="issueOutModalLabel">Issue Out Item</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Issue Out Form -->
+                        <form id="engraved-issue-out-form" method="post" novalidate>
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="issueQuantity">Engraved Number:</label>
+                                <select class="form-control" id="engravedNumber" name="engraved_number" required>
+                                    {% for engraved_number in engraved_numbers %}
+                                        <option value="{{ engraved_number }}">{{ engraved_number }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="issueVoucherNumber">Issue Voucher Number:</label>
+                                <input type="text" class="form-control" id="issueVoucherNumber" name="issue_voucher_number" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="employeeSearch">Issued To:</label>
+                                <input type="text" id="employeeSearch2" class="form-control" placeholder="Search for an employee..." autocomplete="off">
+                                <div id="employeeResults2" class="list-group mt-2"></div>
+                                <input type="hidden" name="issued_to" id="selectedEmployeeId2">
+                            </div>
+                            <input type="hidden" name="item_id" id="modalItemId2">
+                            <input type="hidden" name="quantity_id" id="modalQuantityId2">
+                            <input type="hidden" name="department_id" id="modalDepartmentId2">
+                        </form>
+                        <div class="text-right">
+                            <button type="button" class="btn btn-link" data-toggle="modal" data-target="#addEmployeeModal">
+                                Add New Staff
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="SubmitEngravedIssueOutForm">Issue Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <!-- Employee Modal -->
+        <div class="modal fade" id="addEmployeeModal" tabindex="-1" role="dialog" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addEmployeeModalLabel">Add New Staff</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Form will be loaded here -->
+                        <form id="add-employee-form" method="post" novalidate>
+                            {% csrf_token %}
+                            {{ employee_form.as_p }}
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="submit-employee-form">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+    
+    </div>
+{% endblock %}
+{% block extra_js %}
+
+    <!-- Bootstrap and jQuery JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- AJAX for form submission -->
+    <script>
+        $(document).ready(function() {
+            // AJAX for Stock Form submission
+            $('#submit-stock-form').click(function() {
+                var form = $('#add-stock-form');
+                $.ajax({
+                    url: '{% url "add_stock" item.id %}',  // The URL for the view that handles the form submission
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            $('#addStockModal').modal('hide');
+                            location.reload();
+                        } else {
+                            form.replaceWith(response.form_html);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.log("AJAX error:", status, error);
+                    }
+                });
+            });
+            
+        
+            // Function to remove the hash from the current URL and reload the page
+            function removeHashAndReload() {
+                // Get the current URL
+                var currentUrl = window.location.href;
+            
+                // Check if there's a hash in the URL
+                if (currentUrl.indexOf('#') !== -1) {
+                    // Remove the hash part from the URL
+                    var newUrl = currentUrl.split('#')[0];
+                    
+                    // Update the URL without reloading the page
+                    window.history.replaceState(null, null, newUrl);
+                    
+                    // Reload the page
+                    window.location.reload();
+                }
+            }
+            
+        
+        // Pass the employee data from Django context to a JavaScript variable
+        var employees = {{ employees|safe }}
+        
+        $('#issueOutModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget); // Button that triggered the modal
+            var itemId = button.data('item-id');
+            var quantityId = button.data('quantity-id');
+            var departmentId = button.data('department-id');
+            
+            var modal = $(this);
+            modal.find('#modalItemId').val(itemId);
+            modal.find('#modalQuantityId').val(quantityId);
+            modal.find('#modalDepartmentId').val(departmentId);
+        });
+        
+        $('#EngravedIssueOutModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget); // Button that triggered the modal
+            var itemId = button.data('item-id');
+            var quantityId = button.data('quantity-id');
+            var departmentId = button.data('department-id');
+            
+            var modal = $(this);
+            modal.find('#modalItemId2').val(itemId);
+            modal.find('#modalQuantityId2').val(quantityId);
+            modal.find('#modalDepartmentId2').val(departmentId);
+        });
+
+        // Handle typing in the employee search input
+        $('#employeeSearch').on('keyup', function() {
+            var query = $(this).val().toLowerCase();
+            $('#employeeResults').empty();  // Clear previous results
+
+            if (query.length > 2) {  // Start searching after 3 characters
+                var filteredEmployees = employees.filter(function(employee) {
+                    return employee.name.toLowerCase().includes(query) &&
+                           employee.department_id == $('#modalDepartmentId').val();  // Match the department
+                });
+
+                // Display the filtered results
+                filteredEmployees.forEach(function(employee) {
+                    $('#employeeResults').append(
+                        `<a href="#" class="list-group-item list-group-item-action" data-id="${employee.id}">${employee.name}</a>`
+                    );
+                });
+
+                // Handle clicking on a result
+                $('.list-group-item').on('click', function() {
+                    $('#selectedEmployeeId').val($(this).data('id'));
+                    $('#employeeSearch').val($(this).text());
+                    $('#employeeResults').empty();
+                });
+            }
+        });
+        
+        $('#employeeSearch2').on('keyup', function() {
+            var query = $(this).val().toLowerCase();
+            $('#employeeResults2').empty();  // Clear previous results
+
+            if (query.length > 2) {  // Start searching after 3 characters
+                var filteredEmployees = employees.filter(function(employee) {
+                    return employee.name.toLowerCase().includes(query) &&
+                           employee.department_id == $('#modalDepartmentId2').val();  // Match the department
+                });
+
+                // Display the filtered results
+                filteredEmployees.forEach(function(employee) {
+                    $('#employeeResults2').append(
+                        `<a href="#" class="list-group-item list-group-item-action" data-id="${employee.id}">${employee.name}</a>`
+                    );
+                });
+
+                // Handle clicking on a result
+                $('.list-group-item').on('click', function() {
+                    $('#selectedEmployeeId2').val($(this).data('id'));
+                    $('#employeeSearch2').val($(this).text());
+                    $('#employeeResults2').empty();
+                });
+            }
+        });
+
+        $('#submitIssueOutForm').click(function() {
+            var form = $('#issue-out-form');
+            var availableQuantity = parseInt($('button[data-quantity-id="' + $('#modalQuantityId').val() + '"]').closest('tr').find('td:nth-child(2)').text());
+
+            var quantityToIssue = parseInt($('#issueQuantity').val());
+            if (quantityToIssue > availableQuantity) {
+                alert('Cannot issue out more than the available quantity.');
+                return;
+            }
+
+            $.ajax({
+                url: '{% url "issue_out" %}',
+                type: 'POST',
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.success) {
+                        $('#issueOutModal').modal('hide');
+                        removeHashAndReload();
+                    } else {
+                        alert(response.error || 'An error occurred.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.log("AJAX error:", status, error);
+                }
+            });        
+        });
+            
+        
+        $('#SubmitEngravedIssueOutForm').click(function() {
+            var form = $('#engraved-issue-out-form');
+            var availableQuantity = parseInt($('button[data-quantity-id="' + $('#modalQuantityId').val() + '"]').closest('tr').find('td:nth-child(2)').text());
+
+            var quantityToIssue = parseInt($('#issueQuantity').val());
+            if (quantityToIssue > availableQuantity) {
+                alert('Cannot issue out more than the available quantity.');
+                return;
+            }
+
+            $.ajax({
+                url: '{% url "issue_out_engraved" %}',
+                type: 'POST',
+                data: form.serialize(),
+                success: function(response) {
+                    if (response.success) {
+                        $('#EngravedIssueOutModal').modal('hide');
+                        removeHashAndReload();
+                    } else {
+                        alert(response.error || 'An error occurred.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.log("AJAX error:", status, error);
+                }
+            });        
+        });
+        
+        $('#submit-employee-form').click(function() {
+                var form = $('#add-employee-form');
+                $.ajax({
+                    url: '{% url "add_employee" %}',  // URL for the view handling employee form submission
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        if (response.success) {
+                            $('#addEmployeeModal').modal('hide');
+                            location.reload();
+                        } else {
+                            form.replaceWith(response.form_html);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.log("AJAX error:", status, error);
+                    }
+                });
+            });
+        
+    });
+                
+    </script>
+    <script>
+        $(document).ready(function() {
+            
+            const originalEngravedNumber = document.getElementById('div_id_engraved_number');
+            
+            if (originalEngravedNumber){
+                // Hide the original engraved number field
+                originalEngravedNumber.style.display = 'none';
+            
+                $('#id_quantity').on('input', function() {
+                    var quantity = $(this).val();
+                    var container = $('#engraved-numbers-container');
+                    container.empty();
+                    for (var i = 0; i < quantity; i++) {
+                        container.append('<div class="mb-3"><label for="engraved_number_' + i + '" class="form-label">Engraved Number for item ' + (i + 1) + '</label><input type="text" name="engraved_numbers[]" class="textinput form-control" id="engraved_number_' + i + '"></div>');
+                    }
+                    container.append('<button type="submit" class="btn btn-primary">Submit</button>')
+                });
+    
+                $('#add-stock-form').submit(function(event) {
+                    event.preventDefault();
+                    $.ajax({
+                        url: '{% url 'add_engraved_stock' item.id %}',  // Replace with your URL name
+                        type: 'POST',
+                        data: $(this).serialize(),
+                        success: function(response) {
+                            if (response.success) {
+                                alert('Stock added successfully');
+                                location.reload()
+                            } else {
+                                $('#add-stock-form').html(response.form_html);
+                            }
+                        }
+                    });
+                });
+            
+            }
+            
+        });
+    </script>
+    
+    <script>
+        $(document).ready(function() {
+            const originalEngravedNumber = document.getElementById('div_id_engraved_number');
+            
+            if (originalEngravedNumber) {
+                const issueOutButtons = document.getElementsByClassName('issueOutBtn');
+                const engravedIssueOutButtons = document.getElementsByClassName('EngravedIssueOutBtn');
+                
+                // Hide all elements with the class 'issueOutBtn'
+                for (let i = 0; i < issueOutButtons.length; i++) {
+                    issueOutButtons[i].style.display = 'none';
+                }
+        
+                // Show all elements with the class 'EngravedIssueOutBtn'
+                for (let i = 0; i < engravedIssueOutButtons.length; i++) {
+                    engravedIssueOutButtons[i].style.display = 'block';
+                }
+            }
+        });
+    </script>
+    
+{% endblock %}
+
