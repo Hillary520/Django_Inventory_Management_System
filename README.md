@@ -16,7 +16,7 @@ A comprehensive inventory management system built with Django. This system allow
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/Django_Inventory_Management_System.git
+    git clone https://github.com/Hillary520/Django_Inventory_Management_System.git
     cd Django_Inventory_Management_System
     ```
 
