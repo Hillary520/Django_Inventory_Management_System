@@ -56,12 +56,6 @@ A comprehensive inventory management system built with Django. This system allow
 - Issue inventory items to employees and track the issuance history.
 - Generate detailed reports and view dashboards.
 
-## Demo
-
-<video width="640" height="360" controls>
-    <source src="demo/demo.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-</video>
 
 ## Contributing
 
